@@ -1,0 +1,190 @@
+import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:math';
+
+void main() => runApp(DodgeTheBallGame());
+
+class DodgeTheBallGame extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: HomeScreen(),
+    );
+  }
+}
+
+class HomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Dodge the Ball",
+              style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => GameScreen()),
+                );
+              },
+              child: Text("Start Game"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class GameScreen extends StatefulWidget {
+  @override
+  _GameScreenState createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  double playerX = 0.0; // Player's horizontal position (-1.0 to 1.0)
+  double ballX = 0.0; // Ball's horizontal position
+  double ballY = -1.0; // Ball's vertical position (-1.0 to 1.0)
+  bool isGameOver = false;
+  int score = 0;
+
+  late Timer gameTimer;
+  final double playerWidth = 0.2;
+  final double ballSize = 0.1;
+
+  @override
+  void initState() {
+    super.initState();
+    startGame();
+  }
+
+  void startGame() {
+    ballX = Random().nextDouble() * 2 - 1; // Random initial ball position
+    ballY = -1.0;
+    isGameOver = false;
+    score = 0;
+
+    gameTimer = Timer.periodic(Duration(milliseconds: 30), (timer) {
+      setState(() {
+        ballY += 0.02; // Move the ball down
+
+        // Check if the ball reaches the bottom
+        if (ballY > 1.0) {
+          ballY = -1.0;
+          ballX = Random().nextDouble() * 2 - 1;
+          score += 1; // Increment score
+        }
+
+        // Check for collision
+        if ((ballY > 0.8) &&
+            (ballX - ballSize / 2 < playerX + playerWidth / 2) &&
+            (ballX + ballSize / 2 > playerX - playerWidth / 2)) {
+          isGameOver = true;
+          timer.cancel();
+          showGameOverDialog();
+        }
+      });
+    });
+  }
+
+  void movePlayer(double direction) {
+    setState(() {
+      playerX += direction;
+      if (playerX < -1.0) playerX = -1.0;
+      if (playerX > 1.0) playerX = 1.0;
+    });
+  }
+
+  void showGameOverDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Game Over"),
+          content: Text("Your score: $score"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                restartGame();
+              },
+              child: Text("Restart"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void restartGame() {
+    setState(() {
+      playerX = 0.0;
+      startGame();
+    });
+  }
+
+  @override
+  void dispose() {
+    gameTimer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Align(
+            alignment: Alignment(0, -0.9),
+            child: Text(
+              "Score: $score",
+              style: TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ),
+          Align(
+            alignment: Alignment(playerX, 0.9),
+            child: Container(
+              width: MediaQuery.of(context).size.width * playerWidth,
+              height: 20,
+              color: Colors.green,
+            ),
+          ),
+          Align(
+            alignment: Alignment(ballX, ballY),
+            child: Container(
+              width: MediaQuery.of(context).size.width * ballSize,
+              height: MediaQuery.of(context).size.width * ballSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red,
+              ),
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton(
+            onPressed: () => movePlayer(-0.1),
+            child: Icon(Icons.arrow_left),
+          ),
+          ElevatedButton(
+            onPressed: () => movePlayer(0.1),
+            child: Icon(Icons.arrow_right),
+          ),
+        ],
+      ),
+    );
+  }
+}
